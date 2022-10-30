@@ -1,66 +1,48 @@
 import 'bootstrap/dist/css/bootstrap.css';
 import './App.css';
 
+
 import Painting from './Painting.tsx';
 import { Container, Row } from "react-bootstrap";
 import React from 'react';
+import { ReactComponent as LogoSvg } from "./logo.svg";
+import { EventEmitter } from 'stream';
 
-const images = [
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1567.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP247630.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1944.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1943.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1911.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1939.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP320128.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP-20099-001.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP375450_cropped.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1492.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP-14936-049.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1926.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/77J_045R2M.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP130322.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1025.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1562.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1408.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP317780.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT49.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP-23550-001.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP-14936-047.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DP-13139-001.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1977.jpg",
-  "https://images.metmuseum.org/CRDImages/ep/web-large/DT1576.jpg",
-];
+let interval;
+let scrollInterval;
 
-function getRandomImages(n: number): string[] {
-  let randomImages: string[] = [];
-  let index = 0;
+function distribute(imgs, buckets, pop: boolean) {
+  let step: number = imgs.length / buckets.length;
 
-  for (let i = 0; i < n; i++) {
-    index = Math.floor(Math.random() * images.length);
-    randomImages.push(images[index]);
+  for (let i = 0; i < buckets.length; i++) {
+    for (let j = i * step; j < (i + 1) * step; j++) {
+      buckets[i].push(movingImage(imgs[j], i % 2 === 0));
+      // if (pop) buckets[i].pop();
+    }
   }
 
-  return randomImages;
+  return buckets;
 }
 
-function movingImage(url: string, isLeftMoving: boolean) {
-  return <Painting url={url} isLeftMoving={isLeftMoving} />;
-}
-
-function leftMovingImage(url: string) {
-  return movingImage(url, true);
-}
-
-function rightMovingImage(url: string) {
-  return movingImage(url, false);
+function movingImage(painting: any, isLeftMoving: boolean) {
+  return <Painting
+    key={Math.random()}
+    url={painting.url}
+    url_large={painting.url_large}
+    artist={painting.author}
+    isLeftMoving={isLeftMoving}
+    title={painting.title}
+    created={painting.created}
+    likes={painting.likes}
+  />;
 }
 
 type Props = {};
 type State = {
-  imageRow: (offset: number) => any[],
-  offset: number
+  imageRow: any[],
+  page: number
 };
+
 
 export default class App extends React.Component<Props, State> {
 
@@ -68,13 +50,42 @@ export default class App extends React.Component<Props, State> {
     super(props);
 
     this.state = {
-      imageRow: (offset) => [
-        getRandomImages(10).map(leftMovingImage),
-        getRandomImages(10).map(rightMovingImage),
-        getRandomImages(10).map(leftMovingImage)
-      ],
-      offset: 0
+      imageRow: [[], [], []],
+      page: 0
     }
+
+    scrollInterval = setInterval(() => {
+      let elem = document.getElementById("toprow");
+      if (elem) elem.scrollLeft += 20;
+    }, 1000);
+  }
+
+  loadImages = async () => {
+    await fetch(`http://20.0.0.86:3000/list/30/${this.state.page}`)
+      .then(res => res.json())
+      .then(data => {
+        this.setState({
+          imageRow: distribute(
+            data,
+            this.state.imageRow,
+            false //this.state.page > 2
+          ),
+          page: this.state.page + 1
+        }, () => {
+          console.log(data);
+        });
+      });
+  }
+
+  componentDidMount = () => {
+    this.loadImages();
+    this.loadImages();
+    interval = setInterval(this.loadImages, 10000);
+  }
+
+  componentWillUnmount = () => {
+    clearInterval(interval);
+    clearInterval(scrollInterval);
   }
 
   render() {
@@ -85,27 +96,65 @@ export default class App extends React.Component<Props, State> {
             style={{
               position: "fixed",
               zIndex: 9999,
-              bottom: 10,
-              left: 10,
-              background: "rgba(0, 0, 0, .8)",
-              color: "white",
-              padding: "7px 15px",
-              borderRadius: ".35rem",
-              fontSize: 18
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              // background: "rgba(0, 0, 0, .75)",
+              textAlign: "center",
+              display: "table",
+              animation: "fadeout 1.5s 1 ease-in forwards"
             }}
           >
-            Image Matcher
+            <div
+              style={{
+                display: "table-cell",
+                verticalAlign: "middle"
+              }}
+            >
+              <img
+                src={require("./logo.png")}
+                width={300}
+              />
+            </div>
+          </div>
+          <div
+            style={{
+              position: "fixed",
+              zIndex: 999,
+              bottom: 10,
+              left: 10
+            }}
+          >
+            <span
+              style={{
+                background: "white",
+                color: "rgba(0, 0, 0, .75)",
+                padding: "5px 13px",
+                borderRadius: ".35rem",
+                fontSize: 26,
+                display: "inline-block",
+                fontFamily: "Crimson Text",
+                fontWeight: "bold"
+              }}
+            >
+              &nbsp;
+              <LogoSvg style={{ width: 32, height: 32, marginBottom: 3 }} />
+              &nbsp;
+              Pictura
+              &nbsp;
+            </span>
           </div>
           {
             [0, 1, 2].map(x => (
               <Row
                 style={{
                   height: "calc(100vh/3)",
-                  // flexDirection: (x % 2 !== 0 ? "row-reverse" : "row"),
+                  flexDirection: (x % 2 !== 0 ? "row-reverse" : "row"),
                   flexWrap: "nowrap"
                 }}
               >
-                {this.state.imageRow(x)[x]}
+                {this.state.imageRow[x]}
               </Row>
             ))
           }

@@ -27,29 +27,32 @@
   }
 }
 
+/*
 .moveHorizontalRight {
-  animation: moveImageRight 20s linear infinite;
-  animation-fill-mode: forwards;
-  -webkit-animation-fill-mode: forwards;
+  animation: moveImageRight 10s linear infinite;
 }
 
 .moveHorizontalLeft {
-  animation: moveImageLeft 20s linear infinite;
-  animation-fill-mode: forwards;
-  -webkit-animation-fill-mode: forwards;
+  animation: moveImageLeft 10s linear infinite;
 }
 
 @keyframes moveImageRight {
+  0% {
+    transform: translateX(0px);
+  }
   100% {
-    transform: translateX(calc(100vw));
+    transform: translateX(100vw);
   }
 }
 
 @keyframes moveImageLeft {
-  100% {
-    transform: translateX(calc(-100vw));
+  0% {
+    transform: translateX(0vw);
   }
-}
+  100% {
+    transform: translateX(-100vw);
+  }
+}*/
 
 .painting {
   transition: .25s;
@@ -58,4 +61,17 @@
 .painting:hover {
   cursor: pointer;
   opacity: .7;
+}
+
+@keyframes fadeout {
+  0% {
+    background: rgba(0, 0, 0, .75);
+    opacity: 1;
+  }
+  100% {
+    background: rgba(0, 0, 0, 0);
+    opacity: .1;
+    display: none;
+    z-index: -1;
+  }
 }
